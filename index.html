@@ -1,0 +1,2489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classroom-Based Physical Activity Card Studio</title>
+  <!-- Tailwind CSS for responsive layout & UI controls -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts matching the classic educational card typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,500;1,600&family=Nunito:wght@700;800;900&display=swap"
+    rel="stylesheet"
+  />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            rounded: ['Nunito', 'Fredoka', 'sans-serif'],
+            display: ['Fredoka', 'Nunito', 'sans-serif'],
+            serifCard: ['Lora', 'Georgia', 'serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    /* Custom card styling to faithfully mirror the tactile ring-bound flashcard design */
+    :root {
+      --card-theme: #48a642;
+      --card-theme-light: #c8eebc;
+      --card-theme-dark: #357e30;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+
+    /* Realistic cardstock proportions & depth */
+    .activity-card-shell {
+      width: 100%;
+      max-width: 390px;
+      aspect-ratio: 4 / 5.25;
+      border-radius: 22px;
+      box-shadow:
+        0 14px 30px -8px rgba(15, 23, 42, 0.16),
+        0 4px 10px -2px rgba(15, 23, 42, 0.08),
+        inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    /* Top-left white header cutout matching Front.jpg */
+    .front-header-cutout {
+      position: relative;
+      background-color: #ffffff;
+      border-bottom-right-radius: 34px;
+      padding: 10px 20px 12px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    /* Subtle inverse corner fillet where the white tab meets the top edge */
+    .front-header-cutout::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -18px;
+      width: 18px;
+      height: 18px;
+      background: radial-gradient(circle at 100% 100%, transparent 18px, #ffffff 18.5px);
+      pointer-events: none;
+    }
+
+    /* Subtle inverse corner fillet where the white tab meets the left edge */
+    .front-header-cutout::before {
+      content: '';
+      position: absolute;
+      bottom: -18px;
+      left: 0;
+      width: 18px;
+      height: 18px;
+      background: radial-gradient(circle at 100% 100%, transparent 18px, #ffffff 18.5px);
+      pointer-events: none;
+    }
+
+    /* Binder ring hole-punch styling */
+    .hole-punch {
+      width: 24px;
+      height: 24px;
+      border-radius: 9999px;
+      background: radial-gradient(circle at 35% 35%, #cbd5e1, #e2e8f0 65%, #94a3b8 100%);
+      box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.32);
+      border: 1px solid #cbd5e1;
+      flex-shrink: 0;
+    }
+
+    /* Vertical credit text along inner left border of Back card */
+    .vertical-credit {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+    }
+
+    /* Physical card back rules: never allow scrollbars; auto-scale typography to fit */
+    .back-card-surface {
+      overflow: hidden;
+      --back-header-size: 14px;
+      --back-title-size: 18.5px;
+      --back-equip-size: 13px;
+      --back-step-size: 12px;
+      --back-step-leading: 1.38;
+      --back-step-gap: 6px;
+      --back-section-gap: 8px;
+    }
+    .back-directions-fit-zone {
+      overflow: hidden !important;
+    }
+
+    /* 3D Flip Mode Support */
+    .flip-stage {
+      perspective: 1400px;
+    }
+    .flip-inner {
+      position: relative;
+      width: 100%;
+      max-width: 390px;
+      aspect-ratio: 4 / 5.25;
+      transform-style: preserve-3d;
+      transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .flip-inner.is-flipped {
+      transform: rotateY(180deg);
+    }
+    .flip-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .flip-face-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Editable inline hover hint */
+    [contenteditable="true"]:hover {
+      outline: 2px dashed rgba(255, 255, 255, 0.55);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    .back-card-surface [contenteditable="true"]:hover {
+      outline: 2px dashed rgba(72, 166, 66, 0.45);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    [contenteditable="true"]:focus {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    /* Dedicated Print Stylesheet so teachers can print clean front & back cards */
+    @media print {
+      @page {
+        size: letter portrait;
+        margin: 0.4in;
+      }
+      body {
+        background: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      #print-sheet {
+        display: block !important;
+      }
+      .print-pair-row {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        gap: 0.35in !important;
+        margin-bottom: 0.35in !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .print-card-item {
+        width: 3.6in !important;
+        max-width: 3.6in !important;
+        box-shadow: none !important;
+        border: 1px dashed #94a3b8 !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Top Navigation & Action Toolbar -->
+  <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+          <!-- Classroom Movement Card Icon -->
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">
+            Classroom Activity Card Studio
+          </h1>
+          <p class="text-xs text-slate-500">
+            Editable movement integration cards • Click text on cards or use the editor panel
+          </p>
+        </div>
+      </div>
+
+      <!-- Toolbar Buttons -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          id="btn-new-card"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          New Card
+        </button>
+
+        <button
+          id="btn-duplicate-card"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+          title="Duplicate current card"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <span class="hidden sm:inline">Duplicate</span>
+        </button>
+
+        <button
+          id="btn-export-json"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+          title="Download deck file to share with teachers"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span class="hidden md:inline">Save Deck</span>
+        </button>
+
+        <label
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+          title="Load saved deck JSON"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          <span class="hidden md:inline">Load</span>
+          <input id="input-import-json" type="file" accept=".json" class="hidden" />
+        </label>
+
+        <button
+          id="btn-share-link"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition cursor-pointer"
+          title="Copy a shareable link for the current card"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          <span>Copy Shareable Link</span>
+        </button>
+
+        <button
+          id="btn-print-current"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 shadow-sm transition cursor-pointer"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          Print Card
+        </button>
+
+        <button
+          id="btn-print-all"
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition cursor-pointer"
+        >
+          Print All (<span id="deck-count-badge">4</span>)
+        </button>
+      </div>
+    </div>
+
+    <!-- Deck Strip (Quick Switcher between Cards in Deck) -->
+    <div class="bg-slate-50 border-t border-slate-200/80">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-2 overflow-x-auto" id="deck-tabs-container">
+        <!-- Populated dynamically by JS -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace: Card Preview Stage + Teacher Editor Panel -->
+  <main class="no-print flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <!-- Left / Center: Interactive Card Preview Area (7 cols on lg) -->
+    <section class="lg:col-span-7 flex flex-col items-center">
+      <!-- View Mode Controls -->
+      <div class="w-full flex flex-wrap items-center justify-between gap-2 mb-4 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+          <button
+            id="view-side-by-side"
+            type="button"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-sm transition cursor-pointer"
+          >
+            Front &amp; Back Side-by-Side
+          </button>
+          <button
+            id="view-flip"
+            type="button"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition cursor-pointer"
+          >
+            3D Flip Card
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button
+            id="btn-flip-trigger"
+            type="button"
+            class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition cursor-pointer"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Flip Card
+          </button>
+          <span class="text-xs text-slate-500 hidden sm:inline">
+            Tip: Click any text on the cards to edit directly
+          </span>
+        </div>
+      </div>
+
+      <!-- Side-by-Side Card Stage -->
+      <div id="stage-side-by-side" class="w-full grid grid-cols-1 sm:grid-cols-2 gap-6 justify-items-center items-start">
+        <div class="w-full flex flex-col items-center">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Front of Card</span>
+          <div id="mount-front-card" class="w-full flex justify-center"></div>
+        </div>
+        <div class="w-full flex flex-col items-center">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Back of Card</span>
+          <div id="mount-back-card" class="w-full flex justify-center"></div>
+        </div>
+      </div>
+
+      <!-- 3D Flip Card Stage -->
+      <div id="stage-flip" class="hidden w-full flex flex-col items-center py-2">
+        <div class="flip-stage w-full flex justify-center">
+          <div id="flip-inner" class="flip-inner">
+            <div id="mount-flip-front" class="flip-face flex justify-center"></div>
+            <div id="mount-flip-back" class="flip-face flip-face-back flex justify-center"></div>
+          </div>
+        </div>
+        <p class="text-xs text-slate-500 mt-3">Click "Flip Card" above to inspect the front or back.</p>
+      </div>
+    </section>
+
+    <!-- Right: Structured Teacher Customization Panel (5 cols on lg) -->
+    <aside class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-5">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Customize Activity Card</h2>
+          <p class="text-xs text-slate-500">Changes update both front and back in real time</p>
+        </div>
+        <button
+          id="btn-delete-card"
+          type="button"
+          class="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+          title="Delete this card"
+        >
+          Delete Card
+        </button>
+      </div>
+
+      <!-- Color Theme & Hole Punch Options -->
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+          Card Color Theme &amp; Ring Guide
+        </label>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2" id="theme-swatches">
+            <!-- Swatches injected by JS -->
+          </div>
+          <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer select-none bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+            <input id="toggle-hole-punch" type="checkbox" checked class="rounded text-emerald-600 focus:ring-emerald-500" />
+            Binder Hole Guide
+          </label>
+        </div>
+      </div>
+
+      <!-- Core Card Header Metadata -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label for="field-category" class="block text-xs font-semibold text-slate-700 mb-1">
+            Header Label
+          </label>
+          <input
+            id="field-category"
+            type="text"
+            class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            placeholder="Classroom-Based Activities"
+          />
+        </div>
+        <div>
+          <label for="field-grades" class="block text-xs font-semibold text-slate-700 mb-1">
+            Grade Band
+          </label>
+          <input
+            id="field-grades"
+            type="text"
+            class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            placeholder="3–6"
+          />
+        </div>
+      </div>
+
+      <!-- Dedicated Activity Title & Front Title Layout Section -->
+      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-600">
+            Activity Title &amp; Header Style
+          </label>
+          <span class="text-[11px] text-slate-400">Separated from picture</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label for="field-title" class="block text-xs font-semibold text-slate-700 mb-1">
+              Activity Title
+            </label>
+            <input
+              id="field-title"
+              type="text"
+              class="w-full px-3 py-2 text-sm bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="Mouse Snap"
+            />
+          </div>
+          <div>
+            <label for="field-subtitle" class="block text-xs font-semibold text-slate-700 mb-1">
+              Front Subtitle <span class="text-slate-400 font-normal">(Optional)</span>
+            </label>
+            <input
+              id="field-subtitle"
+              type="text"
+              class="w-full px-3 py-2 text-sm bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="e.g., 3-Min Brain Break"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <span class="block text-[11px] font-semibold text-slate-600 mb-1">Title Alignment</span>
+            <div id="title-align-group" class="grid grid-cols-3 gap-1 bg-slate-200/70 p-1 rounded-xl">
+              <button type="button" data-title-align="left" class="py-1 text-xs font-semibold rounded-lg transition cursor-pointer">Left</button>
+              <button type="button" data-title-align="center" class="py-1 text-xs font-semibold rounded-lg transition cursor-pointer">Center</button>
+              <button type="button" data-title-align="right" class="py-1 text-xs font-semibold rounded-lg transition cursor-pointer">Right</button>
+            </div>
+          </div>
+          <div>
+            <span class="block text-[11px] font-semibold text-slate-600 mb-1">Title Style</span>
+            <div id="title-style-group" class="grid grid-cols-3 gap-1 bg-slate-200/70 p-1 rounded-xl">
+              <button type="button" data-title-style="classic" class="py-1 text-xs font-semibold rounded-lg transition cursor-pointer">Serif</button>
+              <button type="button" data-title-style="bold" class="py-1 text-xs font-semibold rounded-lg transition cursor-pointer">Bold</button>
+              <button type="button" data-title-style="banner" class="py-1 text-xs font-semibold rounded-lg transition cursor-pointer">Banner</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dedicated Front Card Picture & Frame Picker -->
+      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-600">
+            Front Card Picture &amp; Frame
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-slate-700 hover:bg-slate-100 border border-slate-300 shadow-xs cursor-pointer transition">
+            <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Upload Photo
+            <input id="input-upload-photo" type="file" accept="image/*" class="hidden" />
+          </label>
+        </div>
+
+        <!-- Built-in Vector Illustration Presets -->
+        <div class="grid grid-cols-4 gap-2" id="illustration-presets">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Picture Container Frame Style -->
+        <div>
+          <span class="block text-[11px] font-semibold text-slate-600 mb-1">Picture Container Frame</span>
+          <div id="image-frame-group" class="grid grid-cols-3 gap-1.5 bg-slate-200/70 p-1 rounded-xl">
+            <button type="button" data-image-frame="framed" class="py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer">Framed Box</button>
+            <button type="button" data-image-frame="light" class="py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer">White Card</button>
+            <button type="button" data-image-frame="open" class="py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer">Open Canvas</button>
+          </div>
+        </div>
+
+        <!-- Universal Picture Framing Controls (Works for both Illustrations & Uploaded Photos) -->
+        <div id="photo-adjust-controls" class="pt-2 border-t border-slate-200 space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-600">
+            <span class="font-medium">Picture Zoom &amp; Position</span>
+            <div class="flex items-center gap-3">
+              <button id="btn-reset-image-framing" type="button" class="text-slate-500 font-semibold hover:text-slate-800 hover:underline cursor-pointer">
+                Reset
+              </button>
+              <button id="btn-remove-photo" type="button" class="hidden text-rose-600 font-semibold hover:underline cursor-pointer">
+                Use Illustration
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="slider-photo-zoom" class="text-[11px] text-slate-500">Zoom</label>
+              <input id="slider-photo-zoom" type="range" min="75" max="165" value="100" class="w-full accent-emerald-600" />
+            </div>
+            <div>
+              <label for="slider-photo-y" class="text-[11px] text-slate-500">Vertical Position</label>
+              <input id="slider-photo-y" type="range" min="0" max="100" value="50" class="w-full accent-emerald-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Equipment Needed -->
+      <div>
+        <label for="field-equipment" class="block text-xs font-semibold text-slate-700 mb-1">
+          Equipment Needed
+        </label>
+        <input
+          id="field-equipment"
+          type="text"
+          class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          placeholder="None"
+        />
+      </div>
+
+      <!-- Back Card Activity Steps Editor -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-500">
+            Activity Instructions (Bullet Points)
+          </label>
+          <button
+            id="btn-add-step"
+            type="button"
+            class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg transition cursor-pointer"
+          >
+            + Add Step
+          </button>
+        </div>
+        <div id="steps-editor-list" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+          <!-- Step textareas injected dynamically -->
+        </div>
+        <!-- Live Physical Card Fit Status Meter -->
+        <div
+          id="card-fit-status-bar"
+          class="mt-2.5 px-3 py-2 rounded-xl border text-xs flex items-center justify-between gap-2 bg-emerald-50/70 border-emerald-200 text-emerald-800"
+        >
+          <span id="card-fit-status-text" class="font-medium">
+            All directions fit cleanly on physical card (100% text scale)
+          </span>
+          <span id="card-fit-scale-badge" class="font-bold px-2 py-0.5 rounded-md bg-white/80 text-[11px] shrink-0">
+            100%
+          </span>
+        </div>
+      </div>
+
+      <!-- Optional Academic Curriculum Tie-In & Footer Credit -->
+      <div class="grid grid-cols-1 gap-3 pt-2 border-t border-slate-100">
+        <div>
+          <label for="field-integration" class="block text-xs font-semibold text-slate-700 mb-1">
+            Curriculum Connection / Teacher Tip <span class="text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <input
+            id="field-integration"
+            type="text"
+            class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            placeholder="e.g., Math Tie-In: Snap on multiples of 3 or 5!"
+          />
+        </div>
+        <div>
+          <label for="field-credit" class="block text-xs font-semibold text-slate-700 mb-1">
+            Back Edge Footer Label
+          </label>
+          <input
+            id="field-credit"
+            type="text"
+            class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            placeholder="Classroom-Based Physical Activity Integration"
+          />
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Hidden Print Container (Populated right before printing) -->
+  <div id="print-sheet" class="hidden"></div>
+
+  <!-- Non-blocking Toast Feedback Banner -->
+  <div
+    id="toast-banner"
+    class="no-print fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white text-xs sm:text-sm font-medium px-4 py-3 rounded-xl shadow-lg flex items-center gap-2"
+  >
+    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+    <span id="toast-message">Saved</span>
+  </div>
+
+  <script>
+    /**
+     * Classroom-Based Physical Activity Card Studio
+     * Faithfully replicates the physical ring-bound activity card design while giving
+     * teachers full inline + form editing, custom illustrations/photos, deck management, and print layout.
+     */
+
+    const STORAGE_KEY = 'classroom_activity_cards_deck_v2';
+    const ACTIVE_CARD_KEY = 'classroom_activity_cards_active_v2';
+
+    // Color themes curated to match the vibrant classroom card aesthetic
+    const COLOR_THEMES = [
+      { id: 'green', name: 'Classic Activity Green', main: '#48a642', tint: '#c9efbd', dark: '#357e30' },
+      { id: 'blue', name: 'Sky Movement Blue', main: '#2563eb', tint: '#dbeafe', dark: '#1d4ed8' },
+      { id: 'orange', name: 'Energizer Orange', main: '#ea580c', tint: '#ffedd5', dark: '#c2410c' },
+      { id: 'purple', name: 'Brain-Boost Purple', main: '#7c3aed', tint: '#ede9fe', dark: '#5b21b6' },
+      { id: 'teal', name: 'Focus Teal', main: '#0d9488', tint: '#ccfbf1', dark: '#0f766e' },
+      { id: 'rose', name: 'Active Berry', main: '#e11d48', tint: '#ffe4e6', dark: '#be123c' },
+    ];
+
+    // Refined flat character illustrations (Option A) with anchored necks and geometrically aligned hairlines
+    const ILLUSTRATIONS = {
+      arches: {
+        label: 'Arches Game',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="246" rx="126" ry="11" fill="rgba(0,0,0,0.14)" />
+            <!-- Left Student (cx=66, head cy=82, r=22) -->
+            <g>
+              <path d="M46 84 L38 130" stroke="#78350f" stroke-width="7" stroke-linecap="round" />
+              <path d="M86 84 L94 130" stroke="#78350f" stroke-width="7" stroke-linecap="round" />
+              <rect x="44" y="114" width="44" height="68" rx="16" fill="#1e293b" />
+              <path d="M56 114 L66 132 L76 114 Z" fill="#f8fafc" />
+              <rect x="60" y="98" width="12" height="18" rx="5" fill="#fed7aa" />
+              <path d="M84 122 Q116 74 156 64" stroke="#93c5fd" stroke-width="14" stroke-linecap="round" fill="none" />
+              <path d="M46 124 L36 164" stroke="#93c5fd" stroke-width="13" stroke-linecap="round" />
+              <circle cx="66" cy="82" r="22" fill="#fed7aa" />
+              <path d="M42.5 82 A23.5 23.5 0 0 1 89.5 82 C88 68, 76 64, 66 69 C56 64, 44 68, 42.5 82 Z" fill="#78350f" />
+              <circle cx="59" cy="82" r="2.3" fill="#1e293b" />
+              <circle cx="73" cy="82" r="2.3" fill="#1e293b" />
+              <path d="M59 90 Q66 97 73 90" stroke="#9a3412" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+            <!-- Center Ducking Student (cx=160, head cy=122, r=22) -->
+            <g>
+              <rect x="138" y="152" width="44" height="64" rx="16" fill="#0f172a" />
+              <path d="M150 152 L160 170 L170 152 Z" fill="#ffffff" />
+              <rect x="154" y="138" width="12" height="16" rx="5" fill="#fdba74" />
+              <path d="M140 160 L126 196" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+              <path d="M180 160 L194 196" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+              <circle cx="160" cy="122" r="22" fill="#fdba74" />
+              <path d="M137 120 A23 23 0 0 1 183 120 C176 110, 168 112, 160 108 C152 112, 144 110, 137 120 Z" fill="#3b1d0e" />
+              <circle cx="153" cy="122" r="2.3" fill="#1e293b" />
+              <circle cx="167" cy="122" r="2.3" fill="#1e293b" />
+              <path d="M153 130 Q160 137 167 130" stroke="#9a3412" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+            <!-- Right Student (cx=254, head cy=82, r=22) -->
+            <g>
+              <circle cx="254" cy="59" r="11" fill="#1e293b" />
+              <rect x="232" y="114" width="44" height="68" rx="16" fill="#1e293b" />
+              <path d="M244 114 L254 132 L264 114 Z" fill="#f8fafc" />
+              <rect x="248" y="98" width="12" height="18" rx="5" fill="#d97706" />
+              <path d="M236 122 Q204 74 164 64" stroke="#bae6fd" stroke-width="14" stroke-linecap="round" fill="none" />
+              <path d="M274 124 L284 164" stroke="#bae6fd" stroke-width="13" stroke-linecap="round" />
+              <circle cx="254" cy="82" r="22" fill="#d97706" />
+              <path d="M230.5 82 A23.5 23.5 0 0 1 277.5 82 C272 70, 236 70, 230.5 82 Z" fill="#1e293b" />
+              <circle cx="247" cy="82" r="2.3" fill="#1e293b" />
+              <circle cx="261" cy="82" r="2.3" fill="#1e293b" />
+              <path d="M247 90 Q254 97 261 90" stroke="#451a03" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+            <!-- Joined Arch Hands -->
+            <circle cx="160" cy="64" r="9" fill="#fed7aa" />
+          </svg>
+        `,
+      },
+      jumping: {
+        label: 'Star Jumps',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="244" rx="112" ry="10" fill="rgba(0,0,0,0.14)" />
+            <path d="M84 66 L68 52 M236 66 L252 52 M160 36 L160 18" stroke="rgba(255,255,255,0.75)" stroke-width="4" stroke-linecap="round" />
+            <!-- Student (cx=160, head cy=76, r=24) -->
+            <path d="M149 166 L126 222" stroke="#1e3a8a" stroke-width="15" stroke-linecap="round" />
+            <path d="M171 166 L194 222" stroke="#1e3a8a" stroke-width="15" stroke-linecap="round" />
+            <rect x="112" y="217" width="24" height="11" rx="5.5" fill="#ffffff" />
+            <rect x="184" y="217" width="24" height="11" rx="5.5" fill="#ffffff" />
+            <rect x="138" y="108" width="44" height="64" rx="16" fill="#facc15" />
+            <rect x="153" y="96" width="14" height="16" rx="6" fill="#fed7aa" />
+            <path d="M141 118 L110 78" stroke="#fed7aa" stroke-width="13" stroke-linecap="round" />
+            <path d="M179 118 L210 78" stroke="#fed7aa" stroke-width="13" stroke-linecap="round" />
+            <circle cx="160" cy="76" r="24" fill="#fed7aa" />
+            <path d="M134.5 76 A25.5 25.5 0 0 1 185.5 76 C183 63, 172 60, 160 65 C148 60, 137 63, 134.5 76 Z" fill="#1e293b" />
+            <circle cx="152" cy="76" r="2.5" fill="#1e293b" />
+            <circle cx="168" cy="76" r="2.5" fill="#1e293b" />
+            <path d="M152 85 Q160 93 168 85" stroke="#9a3412" stroke-width="2.5" stroke-linecap="round" fill="none" />
+          </svg>
+        `,
+      },
+      stretch: {
+        label: 'Desk Stretch',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="245" rx="122" ry="10" fill="rgba(0,0,0,0.14)" />
+            <!-- Left Student (cx=96, head cy=86, r=22) -->
+            <g>
+              <path d="M86 174 L86 226 M106 174 L106 226" stroke="#334155" stroke-width="14" stroke-linecap="round" />
+              <rect x="76" y="116" width="40" height="62" rx="15" fill="#38bdf8" />
+              <rect x="90" y="104" width="12" height="16" rx="5" fill="#fed7aa" />
+              <path d="M79 124 Q64 78 86 38" stroke="#fed7aa" stroke-width="12" stroke-linecap="round" fill="none" />
+              <path d="M113 124 Q128 78 106 38" stroke="#fed7aa" stroke-width="12" stroke-linecap="round" fill="none" />
+              <circle cx="96" cy="86" r="22" fill="#fed7aa" />
+              <path d="M72.5 86 A23.5 23.5 0 0 1 119.5 86 C116 73, 106 70, 96 75 C86 70, 76 73, 72.5 86 Z" fill="#7c2d12" />
+              <circle cx="89" cy="86" r="2.3" fill="#1e293b" />
+              <circle cx="103" cy="86" r="2.3" fill="#1e293b" />
+              <path d="M89 94 Q96 101 103 94" stroke="#9a3412" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+            <!-- Right Student (cx=224, head cy=86, r=22) -->
+            <g>
+              <circle cx="201" cy="74" r="9.5" fill="#1e293b" />
+              <circle cx="247" cy="74" r="9.5" fill="#1e293b" />
+              <path d="M214 174 L214 226 M234 174 L234 226" stroke="#1e293b" stroke-width="14" stroke-linecap="round" />
+              <rect x="204" y="116" width="40" height="62" rx="15" fill="#fb7185" />
+              <rect x="218" y="104" width="12" height="16" rx="5" fill="#fdba74" />
+              <path d="M206 124 L178 102" stroke="#fdba74" stroke-width="12" stroke-linecap="round" />
+              <path d="M242 124 L270 102" stroke="#fdba74" stroke-width="12" stroke-linecap="round" />
+              <circle cx="224" cy="86" r="22" fill="#fdba74" />
+              <path d="M200.5 86 A23.5 23.5 0 0 1 247.5 86 C244 73, 234 70, 224 75 C214 70, 204 73, 200.5 86 Z" fill="#1e293b" />
+              <circle cx="217" cy="86" r="2.3" fill="#1e293b" />
+              <circle cx="231" cy="86" r="2.3" fill="#1e293b" />
+              <path d="M217 94 Q224 101 231 94" stroke="#9a3412" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+          </svg>
+        `,
+      },
+      balance: {
+        label: 'Balance Pose',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="245" rx="108" ry="10" fill="rgba(0,0,0,0.14)" />
+            <!-- Student in Tree Pose (cx=160, head cy=78, r=23) -->
+            <path d="M153 166 L153 226" stroke="#1e293b" stroke-width="15" stroke-linecap="round" />
+            <path d="M165 166 L192 184 L164 198" stroke="#1e293b" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <rect x="139" y="108" width="42" height="62" rx="15" fill="#a78bfa" />
+            <rect x="153" y="97" width="14" height="16" rx="6" fill="#fed7aa" />
+            <path d="M141 118 L104 110" stroke="#fed7aa" stroke-width="12" stroke-linecap="round" />
+            <path d="M179 118 L216 110" stroke="#fed7aa" stroke-width="12" stroke-linecap="round" />
+            <circle cx="160" cy="78" r="23" fill="#fed7aa" />
+            <path d="M135.5 78 A24.5 24.5 0 0 1 184.5 78 C181 65, 171 62, 160 67 C149 62, 139 65, 135.5 78 Z" fill="#92400e" />
+            <circle cx="152" cy="78" r="2.4" fill="#1e293b" />
+            <circle cx="168" cy="78" r="2.4" fill="#1e293b" />
+            <path d="M152 87 Q160 94 168 87" stroke="#9a3412" stroke-width="2.4" stroke-linecap="round" fill="none" />
+          </svg>
+        `,
+      },
+      march: {
+        label: 'March & Jog',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="245" rx="124" ry="10" fill="rgba(0,0,0,0.14)" />
+            <!-- Left Marching Student (cx=98, head cy=84, r=22) -->
+            <g>
+              <path d="M89 170 L89 224" stroke="#1e3a8a" stroke-width="14" stroke-linecap="round" />
+              <path d="M107 170 L128 184 L124 212" stroke="#1e3a8a" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+              <rect x="78" y="114" width="40" height="62" rx="15" fill="#f97316" />
+              <rect x="92" y="102" width="12" height="16" rx="5" fill="#d97706" />
+              <path d="M80 122 L62 146 L76 158" stroke="#d97706" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+              <path d="M116 122 L134 102" stroke="#d97706" stroke-width="11" stroke-linecap="round" />
+              <circle cx="98" cy="84" r="22" fill="#d97706" />
+              <path d="M74.5 84 A23.5 23.5 0 0 1 121.5 84 C117 71, 79 71, 74.5 84 Z" fill="#1e293b" />
+              <circle cx="91" cy="84" r="2.3" fill="#1e293b" />
+              <circle cx="105" cy="84" r="2.3" fill="#1e293b" />
+              <path d="M91 92 Q98 99 105 92" stroke="#451a03" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+            <!-- Right Marching Student (cx=222, head cy=84, r=22) -->
+            <g>
+              <rect x="199" y="82" width="46" height="40" rx="18" fill="#78350f" />
+              <path d="M213 170 L192 184 L196 212" stroke="#334155" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+              <path d="M231 170 L231 224" stroke="#334155" stroke-width="14" stroke-linecap="round" />
+              <rect x="202" y="114" width="40" height="62" rx="15" fill="#22d3ee" />
+              <rect x="216" y="102" width="12" height="16" rx="5" fill="#fed7aa" />
+              <path d="M204 122 L186 102" stroke="#fed7aa" stroke-width="11" stroke-linecap="round" />
+              <path d="M240 122 L258 146 L244 158" stroke="#fed7aa" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+              <circle cx="222" cy="84" r="22" fill="#fed7aa" />
+              <path d="M198.5 84 A23.5 23.5 0 0 1 245.5 84 C242 71, 232 68, 222 73 C212 68, 202 71, 198.5 84 Z" fill="#78350f" />
+              <circle cx="215" cy="84" r="2.3" fill="#1e293b" />
+              <circle cx="229" cy="84" r="2.3" fill="#1e293b" />
+              <path d="M215 92 Q222 99 229 92" stroke="#9a3412" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+          </svg>
+        `,
+      },
+      squats: {
+        label: 'Chair Squats',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="245" rx="118" ry="10" fill="rgba(0,0,0,0.14)" />
+            <!-- Classroom Chair -->
+            <g transform="translate(190, 118)">
+              <rect x="34" y="0" width="10" height="68" rx="4" fill="#cbd5e1" />
+              <rect x="0" y="60" width="46" height="10" rx="5" fill="#94a3b8" />
+              <path d="M8 70 L8 118 M38 70 L38 118" stroke="#64748b" stroke-width="7" stroke-linecap="round" />
+            </g>
+            <!-- Squatting Student (cx=142, head cy=88, r=22) -->
+            <g>
+              <path d="M142 170 L114 196 L124 228" stroke="#1e293b" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+              <path d="M156 170 L132 196 L142 228" stroke="#0f172a" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+              <rect x="128" y="118" width="38" height="58" rx="15" fill="#facc15" />
+              <rect x="137" y="106" width="12" height="16" rx="5" fill="#fdba74" />
+              <path d="M132 128 L96 128" stroke="#fdba74" stroke-width="12" stroke-linecap="round" />
+              <circle cx="142" cy="88" r="22" fill="#fdba74" />
+              <path d="M118.5 88 A23.5 23.5 0 0 1 165.5 88 C162 74, 152 72, 142 76 C132 72, 122 74, 118.5 88 Z" fill="#451a03" />
+              <circle cx="133" cy="88" r="2.4" fill="#1e293b" />
+              <path d="M129 97 Q136 103 144 97" stroke="#9a3412" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+          </svg>
+        `,
+      },
+      partner: {
+        label: 'High-Five',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="245" rx="124" ry="10" fill="rgba(0,0,0,0.14)" />
+            <path d="M160 36 L160 20 M142 44 L130 32 M178 44 L190 32" stroke="#fef08a" stroke-width="4" stroke-linecap="round" />
+            <!-- Left Student (cx=96, head cy=88, r=22) -->
+            <g>
+              <path d="M87 174 L85 224 M105 174 L107 224" stroke="#1e293b" stroke-width="14" stroke-linecap="round" />
+              <rect x="76" y="118" width="40" height="60" rx="15" fill="#60a5fa" />
+              <rect x="90" y="106" width="12" height="16" rx="5" fill="#fed7aa" />
+              <path d="M78 126 L62 154" stroke="#fed7aa" stroke-width="11" stroke-linecap="round" />
+              <path d="M114 122 L154 54" stroke="#fed7aa" stroke-width="12" stroke-linecap="round" />
+              <circle cx="96" cy="88" r="22" fill="#fed7aa" />
+              <path d="M72.5 88 A23.5 23.5 0 0 1 119.5 88 C116 74, 106 72, 96 76 C86 72, 76 74, 72.5 88 Z" fill="#7c2d12" />
+              <circle cx="102" cy="88" r="2.4" fill="#1e293b" />
+              <path d="M94 96 Q102 103 110 96" stroke="#9a3412" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+            <!-- Right Student (cx=224, head cy=88, r=22) -->
+            <g>
+              <circle cx="224" cy="64" r="10" fill="#1e293b" />
+              <path d="M215 174 L213 224 M233 174 L235 224" stroke="#334155" stroke-width="14" stroke-linecap="round" />
+              <rect x="204" y="118" width="40" height="60" rx="15" fill="#f472b6" />
+              <rect x="218" y="106" width="12" height="16" rx="5" fill="#d97706" />
+              <path d="M242 126 L258 154" stroke="#d97706" stroke-width="11" stroke-linecap="round" />
+              <path d="M206 122 L166 54" stroke="#d97706" stroke-width="12" stroke-linecap="round" />
+              <circle cx="224" cy="88" r="22" fill="#d97706" />
+              <path d="M200.5 88 A23.5 23.5 0 0 1 247.5 88 C242 75, 206 75, 200.5 88 Z" fill="#1e293b" />
+              <circle cx="218" cy="88" r="2.4" fill="#1e293b" />
+              <path d="M210 96 Q218 103 226 96" stroke="#451a03" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+          </svg>
+        `,
+      },
+      yoga: {
+        label: 'Calm Breathing',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="238" rx="112" ry="11" fill="rgba(0,0,0,0.14)" />
+            <path d="M76 112 Q60 130 76 148 M244 112 Q260 130 244 148" stroke="rgba(255,255,255,0.65)" stroke-width="3.5" stroke-linecap="round" fill="none" />
+            <!-- Seated Student (cx=160, head cy=96, r=24) -->
+            <rect x="134" y="94" width="52" height="46" rx="22" fill="#5c2d16" />
+            <path d="M116 202 Q160 184 204 202 Q214 222 184 224 L136 224 Q106 222 116 202 Z" fill="#1e3a8a" />
+            <rect x="137" y="128" width="46" height="64" rx="16" fill="#5eead4" />
+            <rect x="153" y="116" width="14" height="16" rx="6" fill="#fed7aa" />
+            <path d="M139 138 L114 188 L130 198" stroke="#fed7aa" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <path d="M181 138 L206 188 L190 198" stroke="#fed7aa" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <circle cx="160" cy="96" r="24" fill="#fed7aa" />
+            <path d="M134.5 96 A25.5 25.5 0 0 1 185.5 96 C182 82, 171 79, 160 84 C149 79, 138 82, 134.5 96 Z" fill="#5c2d16" />
+            <path d="M148 96 Q152 100 156 96 M164 96 Q168 100 172 96" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" fill="none" />
+            <path d="M152 106 Q160 113 168 106" stroke="#9a3412" stroke-width="2.4" stroke-linecap="round" fill="none" />
+          </svg>
+        `,
+      },
+      dance: {
+        label: 'Freeze Dance',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="245" rx="126" ry="10" fill="rgba(0,0,0,0.14)" />
+            <g fill="rgba(255,255,255,0.85)">
+              <circle cx="152" cy="48" r="5" />
+              <path d="M156 48 L156 26 L172 22 L172 44" stroke="rgba(255,255,255,0.85)" stroke-width="3.5" fill="none" />
+              <circle cx="168" cy="44" r="5" />
+            </g>
+            <!-- Left Student (cx=94, head cy=88, r=22) -->
+            <g>
+              <path d="M85 174 L74 224 M103 174 L114 224" stroke="#1e293b" stroke-width="14" stroke-linecap="round" />
+              <rect x="74" y="118" width="40" height="60" rx="15" fill="#c084fc" />
+              <rect x="88" y="106" width="12" height="16" rx="5" fill="#fdba74" />
+              <path d="M76 124 L54 94" stroke="#fdba74" stroke-width="11" stroke-linecap="round" />
+              <path d="M112 124 L136 100" stroke="#fdba74" stroke-width="11" stroke-linecap="round" />
+              <circle cx="94" cy="88" r="22" fill="#fdba74" />
+              <path d="M70.5 88 A23.5 23.5 0 0 1 117.5 88 C113 75, 75 75, 70.5 88 Z" fill="#1e293b" />
+              <circle cx="87" cy="88" r="2.3" fill="#1e293b" />
+              <circle cx="101" cy="88" r="2.3" fill="#1e293b" />
+              <path d="M87 96 Q94 103 101 96" stroke="#9a3412" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+            <!-- Right Student (cx=226, head cy=88, r=22) -->
+            <g>
+              <circle cx="203" cy="76" r="9.5" fill="#92400e" />
+              <circle cx="249" cy="76" r="9.5" fill="#92400e" />
+              <path d="M217 174 L208 224 M235 174 L250 212" stroke="#334155" stroke-width="14" stroke-linecap="round" />
+              <rect x="206" y="118" width="40" height="60" rx="15" fill="#fde047" />
+              <rect x="220" y="106" width="12" height="16" rx="5" fill="#fed7aa" />
+              <path d="M208 124 L186 106" stroke="#fed7aa" stroke-width="11" stroke-linecap="round" />
+              <path d="M244 124 L266 90" stroke="#fed7aa" stroke-width="11" stroke-linecap="round" />
+              <circle cx="226" cy="88" r="22" fill="#fed7aa" />
+              <path d="M202.5 88 A23.5 23.5 0 0 1 249.5 88 C246 75, 236 72, 226 77 C216 72, 206 75, 202.5 88 Z" fill="#92400e" />
+              <circle cx="219" cy="88" r="2.3" fill="#1e293b" />
+              <circle cx="233" cy="88" r="2.3" fill="#1e293b" />
+              <path d="M219 96 Q226 103 233 96" stroke="#9a3412" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+          </svg>
+        `,
+      },
+      toss: {
+        label: 'Beanbag Toss',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="245" rx="126" ry="10" fill="rgba(0,0,0,0.14)" />
+            <path d="M126 104 Q160 52 194 104" stroke="rgba(255,255,255,0.65)" stroke-width="3" stroke-dasharray="6 6" fill="none" />
+            <rect x="148" y="60" width="24" height="16" rx="7" transform="rotate(-14 160 68)" fill="#facc15" stroke="#ffffff" stroke-width="2" />
+            <!-- Left Student (cx=86, head cy=92, r=21.5) -->
+            <g>
+              <path d="M77 174 L77 224 M95 174 L95 224" stroke="#1e293b" stroke-width="14" stroke-linecap="round" />
+              <rect x="67" y="120" width="38" height="58" rx="14" fill="#38bdf8" />
+              <rect x="80" y="109" width="12" height="15" rx="5" fill="#fed7aa" />
+              <path d="M103 130 L128 112" stroke="#fed7aa" stroke-width="11" stroke-linecap="round" />
+              <circle cx="86" cy="92" r="21.5" fill="#fed7aa" />
+              <path d="M63 92 A23 23 0 0 1 109 92 C106 79, 96 76, 86 81 C76 76, 66 79, 63 92 Z" fill="#78350f" />
+              <circle cx="92" cy="92" r="2.3" fill="#1e293b" />
+              <path d="M84 100 Q92 106 100 100" stroke="#9a3412" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+            <!-- Right Student (cx=234, head cy=92, r=21.5) -->
+            <g>
+              <path d="M225 174 L225 224 M243 174 L243 224" stroke="#334155" stroke-width="14" stroke-linecap="round" />
+              <rect x="215" y="120" width="38" height="58" rx="14" fill="#fb923c" />
+              <rect x="228" y="109" width="12" height="15" rx="5" fill="#d97706" />
+              <path d="M217 130 L192 112" stroke="#d97706" stroke-width="11" stroke-linecap="round" />
+              <circle cx="234" cy="92" r="21.5" fill="#d97706" />
+              <path d="M211 92 A23 23 0 0 1 257 92 C253 79, 215 79, 211 92 Z" fill="#1e293b" />
+              <circle cx="228" cy="92" r="2.3" fill="#1e293b" />
+              <path d="M220 100 Q228 106 236 100" stroke="#451a03" stroke-width="2.3" stroke-linecap="round" fill="none" />
+            </g>
+          </svg>
+        `,
+      },
+      circle: {
+        label: 'Team Circle',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="245" rx="130" ry="11" fill="rgba(0,0,0,0.14)" />
+            <!-- Left Student (cx=72, head cy=94, r=20.5) -->
+            <g>
+              <rect x="50" y="92" width="44" height="38" rx="18" fill="#7c2d12" />
+              <path d="M64 174 L64 224 M80 174 L80 224" stroke="#1e293b" stroke-width="13" stroke-linecap="round" />
+              <rect x="54" y="120" width="36" height="58" rx="14" fill="#f43f5e" />
+              <rect x="66" y="110" width="12" height="14" rx="5" fill="#fed7aa" />
+              <path d="M88 130 L114 144" stroke="#fed7aa" stroke-width="11" stroke-linecap="round" />
+              <circle cx="72" cy="94" r="20.5" fill="#fed7aa" />
+              <path d="M50 94 A22 22 0 0 1 94 94 C91 81, 82 79, 72 83 C62 79, 53 81, 50 94 Z" fill="#7c2d12" />
+              <circle cx="66" cy="94" r="2.2" fill="#1e293b" />
+              <circle cx="78" cy="94" r="2.2" fill="#1e293b" />
+              <path d="M66 102 Q72 108 78 102" stroke="#9a3412" stroke-width="2.2" stroke-linecap="round" fill="none" />
+            </g>
+            <!-- Center Student (cx=160, head cy=88, r=21.5) -->
+            <g>
+              <path d="M151 172 L151 226 M169 172 L169 226" stroke="#0f172a" stroke-width="13" stroke-linecap="round" />
+              <rect x="141" y="116" width="38" height="60" rx="14" fill="#facc15" />
+              <rect x="154" y="105" width="12" height="15" rx="5" fill="#d97706" />
+              <path d="M141 128 L114 144 M179 128 L206 144" stroke="#d97706" stroke-width="11" stroke-linecap="round" />
+              <circle cx="160" cy="88" r="21.5" fill="#d97706" />
+              <path d="M137 88 A23 23 0 0 1 183 88 C179 75, 141 75, 137 88 Z" fill="#1e293b" />
+              <circle cx="154" cy="88" r="2.2" fill="#1e293b" />
+              <circle cx="166" cy="88" r="2.2" fill="#1e293b" />
+              <path d="M154 96 Q160 102 166 96" stroke="#451a03" stroke-width="2.2" stroke-linecap="round" fill="none" />
+            </g>
+            <!-- Right Student (cx=248, head cy=94, r=20.5) -->
+            <g>
+              <path d="M240 174 L240 224 M256 174 L256 224" stroke="#334155" stroke-width="13" stroke-linecap="round" />
+              <rect x="230" y="120" width="36" height="58" rx="14" fill="#38bdf8" />
+              <rect x="242" y="110" width="12" height="14" rx="5" fill="#fdba74" />
+              <path d="M232 130 L206 144" stroke="#fdba74" stroke-width="11" stroke-linecap="round" />
+              <circle cx="248" cy="94" r="20.5" fill="#fdba74" />
+              <path d="M226 94 A22 22 0 0 1 270 94 C266 81, 257 79, 248 83 C239 79, 230 81, 226 94 Z" fill="#451a03" />
+              <circle cx="242" cy="94" r="2.2" fill="#1e293b" />
+              <circle cx="254" cy="94" r="2.2" fill="#1e293b" />
+              <path d="M242 102 Q248 108 254 102" stroke="#9a3412" stroke-width="2.2" stroke-linecap="round" fill="none" />
+            </g>
+          </svg>
+        `,
+      },
+      lunges: {
+        label: 'Side Lunge',
+        svg: `
+          <svg viewBox="0 0 320 260" class="w-full h-full block" preserveAspectRatio="xMidYMax slice">
+            <ellipse cx="160" cy="245" rx="122" ry="10" fill="rgba(0,0,0,0.14)" />
+            <!-- Lunging Student (cx=160, head cy=82, r=23) -->
+            <path d="M149 166 L120 192 L124 226" stroke="#1e293b" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <path d="M171 166 L208 226" stroke="#1e293b" stroke-width="15" stroke-linecap="round" />
+            <rect x="139" y="112" width="42" height="58" rx="15" fill="#34d399" />
+            <rect x="153" y="101" width="14" height="15" rx="6" fill="#fed7aa" />
+            <path d="M141 122 L98 122" stroke="#fed7aa" stroke-width="12" stroke-linecap="round" />
+            <path d="M179 122 L222 122" stroke="#fed7aa" stroke-width="12" stroke-linecap="round" />
+            <circle cx="160" cy="82" r="23" fill="#fed7aa" />
+            <path d="M135.5 82 A24.5 24.5 0 0 1 184.5 82 C181 69, 171 66, 160 71 C149 66, 139 69, 135.5 82 Z" fill="#78350f" />
+            <circle cx="152" cy="82" r="2.4" fill="#1e293b" />
+            <circle cx="168" cy="82" r="2.4" fill="#1e293b" />
+            <path d="M152 91 Q160 98 168 91" stroke="#9a3412" stroke-width="2.4" stroke-linecap="round" fill="none" />
+          </svg>
+        `,
+      },
+    };
+
+    // Starter deck beginning with the exact "Mouse Snap" card from the reference photos
+    const DEFAULT_DECK = [
+      {
+        id: 'card-mouse-snap',
+        category: 'Classroom-Based Activities',
+        grades: '3–6',
+        title: 'Mouse Snap',
+        frontSubtitle: '',
+        titleAlign: 'right',
+        titleStyle: 'classic',
+        imageFrame: 'framed',
+        equipment: 'None',
+        themeId: 'green',
+        illustrationId: 'arches',
+        customPhoto: null,
+        photoZoom: 100,
+        photoY: 50,
+        showHolePunch: true,
+        steps: [
+          'Start by having students stand in a loose circle.',
+          'Select a few pairs of children to form “arches” around the circle by holding hands above their heads.',
+          'The remaining children (mice) move in and out through the arches.',
+          'The arches remain up until the teacher says “Snap!,” then they are brought down quickly but safely, with attention to not injuring a neighbor. The mice are attempting to avoid being caught.',
+          'Students caught in the “mouse snap” then form additional arches, and the game continues.',
+        ],
+        integrationTip: '',
+        credit: 'Classroom-Based Physical Activity Integration',
+      },
+      {
+        id: 'card-math-jumps',
+        category: 'Classroom-Based Activities',
+        grades: '2–5',
+        title: 'Multiple Star Jumps',
+        frontSubtitle: 'Math Skip-Counting Energizer',
+        titleAlign: 'center',
+        titleStyle: 'banner',
+        imageFrame: 'framed',
+        equipment: 'None',
+        themeId: 'blue',
+        illustrationId: 'jumping',
+        customPhoto: null,
+        photoZoom: 100,
+        photoY: 50,
+        showHolePunch: true,
+        steps: [
+          'Have students stand beside their desks with at least an arm’s length of personal space.',
+          'Call out a target number factor (for example, multiples of 4) and start counting aloud together from 1 to 32.',
+          'On every regular number, students march briskly in place.',
+          'Whenever the class reaches a multiple of the target number, students perform an energetic star jump and clap overhead.',
+          'Switch factors every 45 seconds to keep heart rates elevated and mental math sharp.',
+        ],
+        integrationTip: 'Curriculum Tie-In: Works with skip-counting, prime numbers, or spelling syllables.',
+        credit: 'Classroom-Based Physical Activity Integration',
+      },
+      {
+        id: 'card-desk-stretch',
+        category: 'Classroom-Based Activities',
+        grades: 'K–3',
+        title: 'Weather Forecast Freeze',
+        frontSubtitle: 'Movement & Listening Break',
+        titleAlign: 'left',
+        titleStyle: 'bold',
+        imageFrame: 'light',
+        equipment: 'None',
+        themeId: 'orange',
+        illustrationId: 'stretch',
+        customPhoto: null,
+        photoZoom: 100,
+        photoY: 50,
+        showHolePunch: true,
+        steps: [
+          'Ask students to stand behind their pushed-in chairs.',
+          'Call out different weather patterns: “Gentle Breeze” (sway arms overhead), “Rainstorm” (fast tip-toe jogging in place), or “Thunderbolt” (squat low and reach high).',
+          'When you call “Deep Freeze!,” students freeze in a strong, balanced statue pose for 5 seconds.',
+          'Invite student volunteers to take turns acting as the classroom meteorologist.',
+        ],
+        integrationTip: 'Science Tie-In: Connect movements to cloud types or seasonal weather changes.',
+        credit: 'Classroom-Based Physical Activity Integration',
+      },
+      {
+        id: 'card-tree-focus',
+        category: 'Classroom-Based Activities',
+        grades: '4–6',
+        title: 'Quiet Balance Reset',
+        frontSubtitle: '2-Minute Focus Transition',
+        titleAlign: 'center',
+        titleStyle: 'classic',
+        imageFrame: 'framed',
+        equipment: 'None',
+        themeId: 'teal',
+        illustrationId: 'balance',
+        customPhoto: null,
+        photoZoom: 100,
+        photoY: 50,
+        showHolePunch: true,
+        steps: [
+          'Use this 2-minute transition activity before independent reading or assessments.',
+          'Have students stand tall beside their desks and place one foot gently against their opposite ankle or calf.',
+          'Hold arms out wide like branches, then slowly bring palms together overhead while taking three slow, deep breaths.',
+          'Switch legs and repeat while silently reviewing one key takeaway from the lesson.',
+        ],
+        integrationTip: 'SEL Focus: Builds core stability, posture, and calm classroom focus.',
+        credit: 'Classroom-Based Physical Activity Integration',
+      },
+    ];
+
+    // Application State
+    let deck = [];
+    let activeCardId = '';
+    let viewMode = 'side-by-side'; // 'side-by-side' | 'flip'
+    let isFlipped = false;
+    let toastTimer = null;
+
+    // Utility Helpers
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatCategoryLines(str) {
+      const clean = (str || '').trim();
+      if (!clean) return '';
+      if (clean.toLowerCase() === 'classroom-based activities') {
+        return 'Classroom-Based<br>Activities';
+      }
+      return escapeHtml(clean).replace(/\n/g, '<br>');
+    }
+
+    function getTheme(themeId) {
+      return COLOR_THEMES.find((t) => t.id === themeId) || COLOR_THEMES[0];
+    }
+
+    function getActiveCard() {
+      let card = deck.find((c) => c.id === activeCardId);
+      if (!card && deck.length > 0) {
+        card = deck[0];
+        activeCardId = card.id;
+      }
+      return card;
+    }
+
+    function showToast(message) {
+      const banner = document.getElementById('toast-banner');
+      const text = document.getElementById('toast-message');
+      if (!banner || !text) return;
+      text.textContent = message;
+      banner.classList.remove('translate-y-20', 'opacity-0');
+      banner.classList.add('translate-y-0', 'opacity-100');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        banner.classList.add('translate-y-20', 'opacity-0');
+        banner.classList.remove('translate-y-0', 'opacity-100');
+      }, 2800);
+    }
+
+    function normalizeCard(raw, idx = 0) {
+      const fallback = DEFAULT_DECK[0];
+      return {
+        id: raw && raw.id ? String(raw.id) : `card-${Date.now()}-${idx}`,
+        category: raw && raw.category !== undefined ? String(raw.category) : fallback.category,
+        grades: raw && raw.grades !== undefined ? String(raw.grades) : fallback.grades,
+        title: raw && raw.title !== undefined ? String(raw.title) : 'New Movement Activity',
+        frontSubtitle: raw && raw.frontSubtitle !== undefined ? String(raw.frontSubtitle) : '',
+        titleAlign: raw && ['left', 'center', 'right'].includes(raw.titleAlign) ? raw.titleAlign : 'right',
+        titleStyle: raw && ['classic', 'bold', 'banner'].includes(raw.titleStyle) ? raw.titleStyle : 'classic',
+        imageFrame: raw && ['framed', 'light', 'open'].includes(raw.imageFrame) ? raw.imageFrame : 'framed',
+        equipment: raw && raw.equipment !== undefined ? String(raw.equipment) : 'None',
+        themeId: raw && COLOR_THEMES.some((t) => t.id === raw.themeId) ? raw.themeId : 'green',
+        illustrationId: raw && ILLUSTRATIONS[raw.illustrationId] ? raw.illustrationId : 'arches',
+        customPhoto: raw && raw.customPhoto ? String(raw.customPhoto) : null,
+        photoZoom: raw && raw.photoZoom ? Number(raw.photoZoom) : 100,
+        photoY: raw && raw.photoY !== undefined ? Number(raw.photoY) : 50,
+        showHolePunch: raw && raw.showHolePunch !== undefined ? Boolean(raw.showHolePunch) : true,
+        steps:
+          raw && Array.isArray(raw.steps) && raw.steps.length > 0
+            ? raw.steps.map((s) => String(s))
+            : ['Have students stand safely beside their desks with personal space.'],
+        integrationTip: raw && raw.integrationTip !== undefined ? String(raw.integrationTip) : '',
+        credit:
+          raw && raw.credit !== undefined
+            ? String(raw.credit)
+            : 'Classroom-Based Physical Activity Integration',
+      };
+    }
+
+    function saveState() {
+      try {
+        const serializableDeck = deck.map(({ _fitVars, ...rest }) => rest);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(serializableDeck));
+        localStorage.setItem(ACTIVE_CARD_KEY, activeCardId);
+      } catch (err) {
+        console.warn('Unable to save deck to localStorage:', err);
+      }
+    }
+
+    // UTF-8 safe Base64URL helpers for shareable URLs
+    function encodeUtf8Base64Url(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function decodeUtf8Base64Url(b64url) {
+      let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+      while (b64.length % 4) b64 += '=';
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new TextDecoder().decode(bytes);
+    }
+
+    // Encode a card's customizable fields into a compact UTF-8 safe URL hash
+    function buildShareableCardUrl(card) {
+      const payload = {
+        c: card.category,
+        g: card.grades,
+        t: card.title,
+        sub: card.frontSubtitle || '',
+        ta: card.titleAlign || 'right',
+        ts: card.titleStyle || 'classic',
+        fr: card.imageFrame || 'framed',
+        e: card.equipment,
+        th: card.themeId,
+        il: card.illustrationId,
+        sc: card.photoZoom || 100,
+        iy: card.photoY ?? 50,
+        hp: card.showHolePunch ? 1 : 0,
+        s: card.steps,
+        tip: card.integrationTip || '',
+        cr: card.credit || '',
+      };
+      const encoded = encodeUtf8Base64Url(JSON.stringify(payload));
+      const baseUrl = window.location.href.split('#')[0];
+      return `${baseUrl}#card=${encoded}`;
+    }
+
+    function parseSharedCardFromHash() {
+      const hash = window.location.hash || '';
+      if (!hash.startsWith('#card=')) return null;
+      try {
+        const encoded = hash.slice(6);
+        const jsonStr = decodeUtf8Base64Url(encoded);
+        const data = JSON.parse(jsonStr);
+        if (!data || typeof data !== 'object' || !data.t) return null;
+        return {
+          id: 'card-shared-' + Date.now(),
+          category: data.c || 'Classroom-Based Activities',
+          grades: data.g || '3–6',
+          title: data.t,
+          frontSubtitle: data.sub || '',
+          titleAlign: ['left', 'center', 'right'].includes(data.ta) ? data.ta : 'right',
+          titleStyle: ['classic', 'bold', 'banner'].includes(data.ts) ? data.ts : 'classic',
+          imageFrame: ['framed', 'light', 'open'].includes(data.fr) ? data.fr : 'framed',
+          equipment: data.e || 'None',
+          themeId: COLOR_THEMES.some((th) => th.id === data.th) ? data.th : 'green',
+          illustrationId: ILLUSTRATIONS[data.il] ? data.il : 'arches',
+          customPhoto: null,
+          photoZoom: Number(data.sc) || 100,
+          photoY: data.iy !== undefined ? Number(data.iy) : 50,
+          showHolePunch: data.hp !== 0,
+          steps: Array.isArray(data.s) && data.s.length > 0 ? data.s : ['Follow teacher movement prompts.'],
+          integrationTip: data.tip || '',
+          credit: data.cr || 'Classroom-Based Physical Activity Integration',
+        };
+      } catch (err) {
+        console.warn('Could not parse shared card link:', err);
+        return null;
+      }
+    }
+
+    function loadState() {
+      try {
+        const savedDeckRaw = localStorage.getItem(STORAGE_KEY);
+        const savedActiveId = localStorage.getItem(ACTIVE_CARD_KEY);
+        if (savedDeckRaw) {
+          const parsed = JSON.parse(savedDeckRaw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            deck = parsed.map((c, idx) => normalizeCard(c, idx));
+            activeCardId = deck.some((c) => c.id === savedActiveId) ? savedActiveId : deck[0].id;
+          }
+        }
+      } catch (err) {
+        console.warn('Unable to load saved deck:', err);
+      }
+
+      if (deck.length === 0) {
+        deck = DEFAULT_DECK.map((c, idx) => normalizeCard(c, idx));
+        activeCardId = deck[0].id;
+      }
+
+      const sharedCard = parseSharedCardFromHash();
+      if (sharedCard) {
+        deck.unshift(sharedCard);
+        activeCardId = sharedCard.id;
+        saveState();
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+        setTimeout(() => showToast(`Loaded shared card: "${sharedCard.title}"`), 250);
+      }
+    }
+
+    /**
+     * Generates the HTML markup for the FRONT of a card
+     * Separates the Front Card into three distinct, customizable zones:
+     * 1. Top Header Bar (White cutout tab + Grade Band badge)
+     * 2. Dedicated Title Zone (Customizable alignment, font/banner style, and optional subtitle)
+     * 3. Dedicated Picture Container (Framed box, white card, or open canvas with independent zoom & position)
+     */
+    function buildFrontCardHTML(card, isInteractive = true) {
+      const theme = getTheme(card.themeId);
+      const editableAttr = isInteractive ? 'contenteditable="true" spellcheck="false"' : '';
+
+      const titleAlign = card.titleAlign || 'right';
+      const titleStyle = card.titleStyle || 'classic';
+      const imageFrame = card.imageFrame || 'framed';
+      const scale = card.photoZoom || 100;
+      const posY = card.photoY ?? 50;
+
+      const alignClass =
+        titleAlign === 'left'
+          ? 'text-left items-start'
+          : titleAlign === 'center'
+            ? 'text-center items-center'
+            : 'text-right items-end';
+
+      let titleBlockHTML = '';
+      if (titleStyle === 'banner') {
+        titleBlockHTML = `
+          <div class="w-full rounded-xl bg-white/95 px-3.5 py-2 shadow-xs flex flex-col ${alignClass}">
+            <h3
+              ${editableAttr}
+              data-inline-field="title"
+              class="font-rounded font-extrabold text-lg sm:text-[20px] leading-tight tracking-tight"
+              style="color: ${theme.dark};"
+            >${escapeHtml(card.title)}</h3>
+            ${
+              card.frontSubtitle && card.frontSubtitle.trim()
+                ? `<p ${editableAttr} data-inline-field="frontSubtitle" class="text-[11px] font-semibold text-slate-600 mt-0.5 leading-snug">${escapeHtml(card.frontSubtitle)}</p>`
+                : ''
+            }
+          </div>
+        `;
+      } else if (titleStyle === 'bold') {
+        titleBlockHTML = `
+          <div class="w-full flex flex-col ${alignClass}">
+            <h3
+              ${editableAttr}
+              data-inline-field="title"
+              class="font-rounded font-extrabold text-xl sm:text-[23px] leading-tight tracking-tight text-white drop-shadow-xs"
+            >${escapeHtml(card.title)}</h3>
+            ${
+              card.frontSubtitle && card.frontSubtitle.trim()
+                ? `<p ${editableAttr} data-inline-field="frontSubtitle" class="text-[11.5px] font-semibold mt-0.5 leading-snug" style="color: ${theme.tint};">${escapeHtml(card.frontSubtitle)}</p>`
+                : ''
+            }
+          </div>
+        `;
+      } else {
+        titleBlockHTML = `
+          <div class="w-full flex flex-col ${alignClass}">
+            <h3
+              ${editableAttr}
+              data-inline-field="title"
+              class="font-serifCard italic font-medium text-xl sm:text-[23px] leading-tight tracking-tight"
+              style="color: ${theme.tint};"
+            >${escapeHtml(card.title)}</h3>
+            ${
+              card.frontSubtitle && card.frontSubtitle.trim()
+                ? `<p ${editableAttr} data-inline-field="frontSubtitle" class="text-[11.5px] font-medium text-white/90 mt-0.5 leading-snug">${escapeHtml(card.frontSubtitle)}</p>`
+                : ''
+            }
+          </div>
+        `;
+      }
+
+      const rawSvg = ILLUSTRATIONS[card.illustrationId]?.svg || ILLUSTRATIONS.arches.svg;
+      const offsetY = (posY - 50) * 0.45;
+      const visualContent = card.customPhoto
+        ? `<img
+             src="${card.customPhoto}"
+             alt="${escapeHtml(card.title)}"
+             class="w-full h-full object-cover select-none"
+             style="transform: scale(${scale / 100}); object-position: 50% ${posY}%;"
+           />`
+        : `<div
+             class="w-full h-full flex items-end justify-center select-none"
+             style="transform: scale(${scale / 100}) translateY(${offsetY}%);"
+           >${rawSvg}</div>`;
+
+      const frameContainerClass =
+        imageFrame === 'light'
+          ? 'relative flex-1 mx-3.5 mb-3.5 rounded-[14px] overflow-hidden bg-white border border-white shadow-xs flex items-end justify-center'
+          : imageFrame === 'framed'
+            ? 'relative flex-1 mx-3.5 mb-3.5 rounded-[14px] overflow-hidden border-2 border-white/80 bg-black/10 shadow-inner flex items-end justify-center'
+            : 'relative flex-1 w-full overflow-hidden flex items-end justify-center border-t border-white/20';
+
+      return `
+        <div class="activity-card-shell bg-white p-3.5 sm:p-4 flex flex-col select-none">
+          <!-- Colored Inner Card Body -->
+          <div
+            class="relative flex-1 rounded-[16px] overflow-hidden flex flex-col"
+            style="background-color: ${theme.main};"
+          >
+            <!-- 1. Top Header Zone: Left White Cutout Tab + Right Grade Badge -->
+            <div class="flex items-start justify-between relative z-10 shrink-0">
+              <!-- Signature Top-Left White Cutout -->
+              <div class="front-header-cutout">
+                ${card.showHolePunch ? '<div class="hole-punch" title="Binder Ring Hole Guide"></div>' : ''}
+                <div
+                  ${editableAttr}
+                  data-inline-field="category"
+                  class="font-rounded font-extrabold text-[#3f3f3f] text-[13px] sm:text-[14.5px] leading-[1.15] tracking-tight"
+                >${formatCategoryLines(card.category)}</div>
+              </div>
+
+              <!-- Top-Right Grades Callout -->
+              <div class="pt-3 pr-3.5 pl-2 text-right text-white flex items-baseline gap-1.5 shrink-0">
+                <span class="text-[11px] sm:text-xs font-bold tracking-wide opacity-95">Grades</span>
+                <span
+                  ${editableAttr}
+                  data-inline-field="grades"
+                  class="font-rounded font-black text-2xl sm:text-[32px] leading-none tracking-tight"
+                >${escapeHtml(card.grades)}</span>
+              </div>
+            </div>
+
+            <!-- 2. Separated Activity Title Zone -->
+            <div class="px-3.5 pt-2.5 pb-2 relative z-10 shrink-0">
+              ${titleBlockHTML}
+            </div>
+
+            <!-- 3. Separated Picture / Illustration Container -->
+            <div class="${frameContainerClass}">
+              ${visualContent}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    /**
+     * Generates the HTML markup for the BACK of a card.
+     * Enforces fixed physical card boundaries (no scrolling) and uses CSS custom properties
+     * adjusted automatically by fitBackCardElement() so every direction fits on the printed card.
+     */
+    function buildBackCardHTML(card, isInteractive = true) {
+      const theme = getTheme(card.themeId);
+      const editableAttr = isInteractive ? 'contenteditable="true" spellcheck="false"' : '';
+
+      const fit = card._fitVars || {};
+      const fitInlineVars = [
+        fit.headerSize ? `--back-header-size: ${fit.headerSize}px;` : '',
+        fit.titleSize ? `--back-title-size: ${fit.titleSize}px;` : '',
+        fit.equipSize ? `--back-equip-size: ${fit.equipSize}px;` : '',
+        fit.stepSize ? `--back-step-size: ${fit.stepSize}px;` : '',
+        fit.stepLeading ? `--back-step-leading: ${fit.stepLeading};` : '',
+        fit.stepGap !== undefined ? `--back-step-gap: ${fit.stepGap}px;` : '',
+        fit.sectionGap !== undefined ? `--back-section-gap: ${fit.sectionGap}px;` : '',
+      ].join(' ');
+
+      const stepsHTML = (card.steps || [])
+        .map(
+          (step, idx) => `
+            <li
+              style="margin-bottom: var(--back-step-gap);"
+              class="last:mb-0 pl-0.5"
+            >
+              <span
+                ${editableAttr}
+                data-step-index="${idx}"
+                class="outline-none"
+              >${escapeHtml(step)}</span>
+            </li>
+          `
+        )
+        .join('');
+
+      const integrationHTML =
+        card.integrationTip && card.integrationTip.trim()
+          ? `
+            <div
+              class="mt-2 px-2.5 py-1.5 rounded-lg text-slate-700 shrink-0"
+              style="
+                background-color: ${theme.tint}55;
+                border-left: 3px solid ${theme.main};
+                font-size: calc(var(--back-step-size) * 0.92);
+                line-height: 1.28;
+              "
+            >
+              <span ${editableAttr} data-inline-field="integrationTip">${escapeHtml(card.integrationTip)}</span>
+            </div>
+          `
+          : '';
+
+      return `
+        <div
+          class="activity-card-shell back-card-surface bg-white p-3 sm:p-3.5 flex flex-col select-none overflow-hidden"
+          data-card-id="${escapeHtml(card.id)}"
+          style="${fitInlineVars}"
+        >
+          <div class="relative flex-1 min-h-0 flex items-stretch overflow-hidden">
+            <!-- Vertical Credit Line along Left Outer Margin (matches Back.jpg) -->
+            <div class="w-3.5 shrink-0 flex items-end justify-center pb-3 pr-0.5">
+              <span
+                ${editableAttr}
+                data-inline-field="credit"
+                class="vertical-credit text-[8px] text-slate-500 whitespace-nowrap tracking-tight leading-none"
+              >${escapeHtml(card.credit || '')}</span>
+            </div>
+
+            <!-- Inset Hairline Rounded Border Frame -->
+            <div class="flex-1 min-w-0 min-h-0 border border-slate-500/80 rounded-[18px] px-3.5 py-3 sm:px-4 sm:py-3.5 flex flex-col overflow-hidden relative bg-white">
+              <!-- Top Header Row: Green Category Title + Top-Right Binder Hole Punch -->
+              <div
+                class="flex items-start justify-between gap-2 shrink-0"
+                style="margin-bottom: var(--back-section-gap);"
+              >
+                <div
+                  ${editableAttr}
+                  data-inline-field="category"
+                  class="font-rounded font-extrabold leading-[1.12] tracking-tight"
+                  style="color: ${theme.main}; font-size: var(--back-header-size);"
+                >${formatCategoryLines(card.category)}</div>
+
+                ${
+                  card.showHolePunch
+                    ? '<div class="hole-punch" title="Binder Ring Hole Guide"></div>'
+                    : ''
+                }
+              </div>
+
+              <!-- Non-Scrolling Physical Fit Zone for Title, Equipment, and All Directions -->
+              <div class="back-directions-fit-zone flex-1 min-h-0 flex flex-col justify-between">
+                <div class="back-directions-content flex flex-col">
+                  <!-- Activity Title -->
+                  <h3
+                    ${editableAttr}
+                    data-inline-field="title"
+                    class="font-serifCard italic font-medium leading-tight"
+                    style="
+                      color: ${theme.main};
+                      font-size: var(--back-title-size);
+                      margin-bottom: calc(var(--back-section-gap) * 0.75);
+                    "
+                  >${escapeHtml(card.title)}</h3>
+
+                  <!-- Equipment Line -->
+                  <p
+                    class="font-serifCard italic text-slate-800 leading-snug"
+                    style="
+                      font-size: var(--back-equip-size);
+                      margin-bottom: var(--back-section-gap);
+                    "
+                  >
+                    Equipment:
+                    <span ${editableAttr} data-inline-field="equipment">${escapeHtml(card.equipment)}</span>
+                  </p>
+
+                  <!-- Bulleted Directions List -->
+                  <ul
+                    class="list-disc pl-4 text-slate-800"
+                    style="
+                      font-size: var(--back-step-size);
+                      line-height: var(--back-step-leading);
+                    "
+                  >
+                    ${stepsHTML}
+                  </ul>
+
+                  ${integrationHTML}
+                </div>
+
+                <!-- Non-Print Overflow Warning Pill (Only shown if text exceeds physical card limit) -->
+                <div
+                  class="back-fit-warning hidden no-print mt-1 px-2 py-1 rounded-md bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-semibold text-center shrink-0"
+                >
+                  Directions exceed physical card space — shorten text to fit print area
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    /**
+     * Automatically scales down typography and bullet spacing on a single rendered back card
+     * until all directions fit cleanly inside the physical card height without scrolling.
+     */
+    function fitBackCardElement(cardEl) {
+      if (!cardEl) return { scalePct: 100, overflows: false };
+      const zone = cardEl.querySelector('.back-directions-fit-zone');
+      const content = cardEl.querySelector('.back-directions-content');
+      const warningEl = cardEl.querySelector('.back-fit-warning');
+      if (!zone || !content || zone.clientHeight === 0) {
+        return { scalePct: 100, overflows: false };
+      }
+
+      const base = {
+        headerSize: 14,
+        titleSize: 18.5,
+        equipSize: 13,
+        stepSize: 12,
+        stepLeading: 1.38,
+        stepGap: 6,
+        sectionGap: 8,
+      };
+
+      const applyScale = (ratio) => {
+        const headerSize = +(base.headerSize * Math.max(0.82, ratio)).toFixed(2);
+        const titleSize = +(base.titleSize * Math.max(0.76, ratio)).toFixed(2);
+        const equipSize = +(base.equipSize * Math.max(0.76, ratio)).toFixed(2);
+        const stepSize = +(base.stepSize * ratio).toFixed(2);
+        const stepLeading = +(1.16 + (base.stepLeading - 1.16) * Math.max(0, (ratio - 0.65) / 0.35)).toFixed(3);
+        const stepGap = +(base.stepGap * Math.max(0.25, (ratio - 0.55) / 0.45)).toFixed(2);
+        const sectionGap = +(base.sectionGap * Math.max(0.35, (ratio - 0.55) / 0.45)).toFixed(2);
+
+        cardEl.style.setProperty('--back-header-size', `${headerSize}px`);
+        cardEl.style.setProperty('--back-title-size', `${titleSize}px`);
+        cardEl.style.setProperty('--back-equip-size', `${equipSize}px`);
+        cardEl.style.setProperty('--back-step-size', `${stepSize}px`);
+        cardEl.style.setProperty('--back-step-leading', `${stepLeading}`);
+        cardEl.style.setProperty('--back-step-gap', `${stepGap}px`);
+        cardEl.style.setProperty('--back-section-gap', `${sectionGap}px`);
+
+        return { headerSize, titleSize, equipSize, stepSize, stepLeading, stepGap, sectionGap };
+      };
+
+      let ratio = 1.0;
+      let appliedVars = applyScale(ratio);
+      const minRatio = 0.66;
+
+      while (content.scrollHeight > zone.clientHeight + 1 && ratio > minRatio) {
+        ratio = +(ratio - 0.025).toFixed(3);
+        appliedVars = applyScale(ratio);
+      }
+
+      const stillOverflows = content.scrollHeight > zone.clientHeight + 2;
+      if (warningEl) {
+        if (stillOverflows) {
+          warningEl.classList.remove('hidden');
+        } else {
+          warningEl.classList.add('hidden');
+        }
+      }
+
+      const cardId = cardEl.getAttribute('data-card-id');
+      if (cardId && Array.isArray(deck)) {
+        const matchedCard = deck.find((c) => c.id === cardId);
+        if (matchedCard) {
+          matchedCard._fitVars = appliedVars;
+        }
+      }
+
+      return {
+        scalePct: Math.round(ratio * 100),
+        overflows: stillOverflows,
+      };
+    }
+
+    /**
+     * Runs auto-fit across all visible back cards and updates the editor's Physical Fit Meter.
+     */
+    function fitAllBackCards() {
+      const backCards = document.querySelectorAll('.back-card-surface');
+      let primaryResult = { scalePct: 100, overflows: false };
+
+      backCards.forEach((el, index) => {
+        const res = fitBackCardElement(el);
+        if (index === 0) {
+          primaryResult = res;
+        }
+      });
+
+      const statusBar = document.getElementById('card-fit-status-bar');
+      const statusText = document.getElementById('card-fit-status-text');
+      const scaleBadge = document.getElementById('card-fit-scale-badge');
+
+      if (statusBar && statusText && scaleBadge) {
+        scaleBadge.textContent = `${primaryResult.scalePct}%`;
+        if (primaryResult.overflows) {
+          statusBar.className =
+            'mt-2.5 px-3 py-2 rounded-xl border text-xs flex items-center justify-between gap-2 bg-amber-50 border-amber-300 text-amber-900';
+          statusText.textContent =
+            'Directions exceed physical card space — shorten steps to avoid print cutoff';
+        } else if (primaryResult.scalePct < 100) {
+          statusBar.className =
+            'mt-2.5 px-3 py-2 rounded-xl border text-xs flex items-center justify-between gap-2 bg-sky-50 border-sky-200 text-sky-900';
+          statusText.textContent =
+            'Auto-scaled text so all directions fit cleanly on physical card';
+        } else {
+          statusBar.className =
+            'mt-2.5 px-3 py-2 rounded-xl border text-xs flex items-center justify-between gap-2 bg-emerald-50/70 border-emerald-200 text-emerald-800';
+          statusText.textContent =
+            'All directions fit cleanly on physical card (100% text scale)';
+        }
+      }
+    }
+
+    /**
+     * Renders the deck switcher bar at the top of the workspace
+     */
+    function renderDeckTabs() {
+      const container = document.getElementById('deck-tabs-container');
+      const countBadge = document.getElementById('deck-count-badge');
+      if (countBadge) countBadge.textContent = String(deck.length);
+      if (!container) return;
+
+      container.innerHTML = deck
+        .map((c, idx) => {
+          const theme = getTheme(c.themeId);
+          const isActive = c.id === activeCardId;
+          return `
+            <button
+              type="button"
+              data-select-card="${escapeHtml(c.id)}"
+              class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border transition cursor-pointer ${
+                isActive
+                  ? 'bg-white text-slate-900 border-slate-300 shadow-xs'
+                  : 'bg-transparent text-slate-600 border-transparent hover:bg-white/70 hover:text-slate-900'
+              }"
+            >
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${theme.main};"></span>
+              <span>${idx + 1}. ${escapeHtml(c.title || 'Untitled')}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 font-bold">
+                Gr. ${escapeHtml(c.grades || '3–6')}
+              </span>
+            </button>
+          `;
+        })
+        .join('');
+    }
+
+    /**
+     * Renders the Front and Back cards onto both the Side-by-Side stage and 3D Flip stage
+     */
+    function renderCardStage() {
+      const card = getActiveCard();
+      if (!card) return;
+
+      const frontHTML = buildFrontCardHTML(card, true);
+      const backHTML = buildBackCardHTML(card, true);
+
+      const mountFront = document.getElementById('mount-front-card');
+      const mountBack = document.getElementById('mount-back-card');
+      const mountFlipFront = document.getElementById('mount-flip-front');
+      const mountFlipBack = document.getElementById('mount-flip-back');
+
+      if (mountFront) mountFront.innerHTML = frontHTML;
+      if (mountBack) mountBack.innerHTML = backHTML;
+      if (mountFlipFront) mountFlipFront.innerHTML = frontHTML;
+      if (mountFlipBack) mountFlipBack.innerHTML = backHTML;
+
+      requestAnimationFrame(() => fitAllBackCards());
+    }
+
+    /**
+     * Populates the right-hand editor controls from the active card
+     */
+    function syncFormFromCard() {
+      const card = getActiveCard();
+      if (!card) return;
+
+      document.getElementById('field-category').value = card.category;
+      document.getElementById('field-grades').value = card.grades;
+      document.getElementById('field-title').value = card.title;
+      document.getElementById('field-subtitle').value = card.frontSubtitle || '';
+      document.getElementById('field-equipment').value = card.equipment;
+      document.getElementById('field-integration').value = card.integrationTip || '';
+      document.getElementById('field-credit').value = card.credit || '';
+      document.getElementById('toggle-hole-punch').checked = Boolean(card.showHolePunch);
+
+      // Sync Title Alignment segmented buttons
+      const activeAlign = card.titleAlign || 'right';
+      document.querySelectorAll('#title-align-group [data-title-align]').forEach((btn) => {
+        const isMatch = btn.getAttribute('data-title-align') === activeAlign;
+        btn.className = isMatch
+          ? 'py-1 text-xs font-semibold rounded-lg transition cursor-pointer bg-white text-slate-900 shadow-xs'
+          : 'py-1 text-xs font-semibold rounded-lg transition cursor-pointer text-slate-600 hover:text-slate-900';
+      });
+
+      // Sync Title Style segmented buttons
+      const activeTitleStyle = card.titleStyle || 'classic';
+      document.querySelectorAll('#title-style-group [data-title-style]').forEach((btn) => {
+        const isMatch = btn.getAttribute('data-title-style') === activeTitleStyle;
+        btn.className = isMatch
+          ? 'py-1 text-xs font-semibold rounded-lg transition cursor-pointer bg-white text-slate-900 shadow-xs'
+          : 'py-1 text-xs font-semibold rounded-lg transition cursor-pointer text-slate-600 hover:text-slate-900';
+      });
+
+      // Sync Picture Frame segmented buttons
+      const activeFrame = card.imageFrame || 'framed';
+      document.querySelectorAll('#image-frame-group [data-image-frame]').forEach((btn) => {
+        const isMatch = btn.getAttribute('data-image-frame') === activeFrame;
+        btn.className = isMatch
+          ? 'py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer bg-white text-slate-900 shadow-xs'
+          : 'py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer text-slate-600 hover:text-slate-900';
+      });
+
+      // Theme Swatches
+      const swatchesContainer = document.getElementById('theme-swatches');
+      swatchesContainer.innerHTML = COLOR_THEMES.map((t) => {
+        const isSelected = t.id === card.themeId;
+        return `
+          <button
+            type="button"
+            data-theme-id="${t.id}"
+            title="${escapeHtml(t.name)}"
+            class="w-7 h-7 rounded-full transition cursor-pointer flex items-center justify-center ${
+              isSelected ? 'ring-2 ring-offset-2 ring-slate-900 scale-110' : 'hover:scale-105 opacity-90'
+            }"
+            style="background-color: ${t.main};"
+          >
+            ${
+              isSelected
+                ? '<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>'
+                : ''
+            }
+          </button>
+        `;
+      }).join('');
+
+      // Built-in Vector Illustration Presets (previewed on active card theme color)
+      const activeTheme = getTheme(card.themeId);
+      const presetsContainer = document.getElementById('illustration-presets');
+      presetsContainer.innerHTML = Object.entries(ILLUSTRATIONS)
+        .map(([id, item]) => {
+          const isSelected = !card.customPhoto && card.illustrationId === id;
+          return `
+            <button
+              type="button"
+              data-illustration-id="${id}"
+              class="group flex flex-col items-center rounded-xl p-1 border transition cursor-pointer bg-white ${
+                isSelected
+                  ? 'border-emerald-600 ring-2 ring-emerald-500/30 shadow-xs'
+                  : 'border-slate-200 hover:border-slate-300'
+              }"
+            >
+              <div
+                class="w-full h-12 rounded-lg overflow-hidden flex items-end justify-center"
+                style="background-color: ${activeTheme.main};"
+              >
+                ${item.svg}
+              </div>
+              <span class="text-[10px] font-semibold text-slate-700 mt-1 truncate w-full text-center">
+                ${escapeHtml(item.label)}
+              </span>
+            </button>
+          `;
+        })
+        .join('');
+
+      // Picture zoom & vertical position controls
+      document.getElementById('slider-photo-zoom').value = card.photoZoom || 100;
+      document.getElementById('slider-photo-y').value = card.photoY ?? 50;
+      const btnRemovePhoto = document.getElementById('btn-remove-photo');
+      if (card.customPhoto) {
+        btnRemovePhoto.classList.remove('hidden');
+      } else {
+        btnRemovePhoto.classList.add('hidden');
+      }
+
+      // Steps List Editor
+      renderStepsEditor();
+    }
+
+    function renderStepsEditor() {
+      const card = getActiveCard();
+      const listEl = document.getElementById('steps-editor-list');
+      if (!card || !listEl) return;
+
+      listEl.innerHTML = (card.steps || [])
+        .map(
+          (stepText, idx) => `
+            <div class="flex items-start gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+              <span class="w-5 h-5 rounded-full bg-white border border-slate-300 text-[11px] font-bold text-slate-600 flex items-center justify-center shrink-0 mt-1">
+                ${idx + 1}
+              </span>
+              <textarea
+                rows="2"
+                data-step-textarea="${idx}"
+                class="flex-1 text-xs leading-relaxed bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-y"
+                placeholder="Enter step instruction..."
+              >${escapeHtml(stepText)}</textarea>
+              <div class="flex flex-col gap-1 shrink-0">
+                <button
+                  type="button"
+                  data-move-step-up="${idx}"
+                  ${idx === 0 ? 'disabled' : ''}
+                  class="p-1 rounded-md text-slate-500 hover:bg-slate-200 disabled:opacity-30 cursor-pointer"
+                  title="Move step up"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  data-move-step-down="${idx}"
+                  ${idx === card.steps.length - 1 ? 'disabled' : ''}
+                  class="p-1 rounded-md text-slate-500 hover:bg-slate-200 disabled:opacity-30 cursor-pointer"
+                  title="Move step down"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  data-delete-step="${idx}"
+                  ${card.steps.length <= 1 ? 'disabled' : ''}
+                  class="p-1 rounded-md text-rose-500 hover:bg-rose-100 disabled:opacity-30 cursor-pointer"
+                  title="Remove step"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          `
+        )
+        .join('');
+    }
+
+    function renderAll() {
+      renderDeckTabs();
+      renderCardStage();
+      syncFormFromCard();
+    }
+
+    /**
+     * Populates the hidden print sheet with Front + Back card pairs and triggers browser print
+     */
+    function triggerPrint(cardsToPrint) {
+      fitAllBackCards();
+      const printSheet = document.getElementById('print-sheet');
+      if (!printSheet) return;
+
+      printSheet.innerHTML = cardsToPrint
+        .map((card) => {
+          const front = buildFrontCardHTML(card, false).replace(
+            'activity-card-shell',
+            'activity-card-shell print-card-item'
+          );
+          const back = buildBackCardHTML(card, false).replace(
+            'activity-card-shell',
+            'activity-card-shell print-card-item'
+          );
+          return `
+            <div class="print-pair-row">
+              ${front}
+              ${back}
+            </div>
+          `;
+        })
+        .join('');
+
+      setTimeout(() => {
+        window.print();
+      }, 120);
+    }
+
+    /**
+     * Resizes uploaded classroom photos on an offscreen canvas so print resolution stays crisp
+     * while keeping localStorage usage small and fast.
+     */
+    function processUploadedPhoto(file, callback) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 900;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          callback(canvas.toDataURL('image/jpeg', 0.86));
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /**
+     * Wires up all toolbar buttons, deck tabs, inline contenteditable sync, and editor inputs
+     */
+    function bindEvents() {
+      // Deck Tab Switching
+      document.getElementById('deck-tabs-container').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-select-card]');
+        if (!btn) return;
+        activeCardId = btn.getAttribute('data-select-card');
+        saveState();
+        renderAll();
+      });
+
+      // New Card
+      document.getElementById('btn-new-card').addEventListener('click', () => {
+        const newCard = normalizeCard({
+          id: 'card-' + Date.now(),
+          category: 'Classroom-Based Activities',
+          grades: '3–6',
+          title: 'Desk Energizer',
+          frontSubtitle: '2-Minute Movement Break',
+          titleAlign: 'center',
+          titleStyle: 'classic',
+          imageFrame: 'framed',
+          equipment: 'None',
+          themeId: COLOR_THEMES[deck.length % COLOR_THEMES.length].id,
+          illustrationId: 'jumping',
+          steps: [
+            'Have students stand safely beside their desks with at least an arm’s length of personal space.',
+            'Lead the class through 20 seconds of marching in place followed by 10 star jumps.',
+            'Finish with three slow, deep breaths before transitioning back to instruction.',
+          ],
+          integrationTip: '',
+          credit: 'Classroom-Based Physical Activity Integration',
+        });
+        deck.push(newCard);
+        activeCardId = newCard.id;
+        saveState();
+        renderAll();
+        showToast('Added new activity card');
+      });
+
+      // Duplicate Card
+      document.getElementById('btn-duplicate-card').addEventListener('click', () => {
+        const current = getActiveCard();
+        if (!current) return;
+        const copy = normalizeCard({
+          ...current,
+          id: 'card-' + Date.now(),
+          title: `${current.title} (Copy)`,
+          steps: [...current.steps],
+        });
+        const idx = deck.findIndex((c) => c.id === current.id);
+        deck.splice(idx + 1, 0, copy);
+        activeCardId = copy.id;
+        saveState();
+        renderAll();
+        showToast('Card duplicated');
+      });
+
+      // Delete Card
+      document.getElementById('btn-delete-card').addEventListener('click', () => {
+        if (deck.length <= 1) {
+          showToast('At least one card must remain in your deck');
+          return;
+        }
+        const idx = deck.findIndex((c) => c.id === activeCardId);
+        deck.splice(idx, 1);
+        activeCardId = deck[Math.max(0, idx - 1)].id;
+        saveState();
+        renderAll();
+        showToast('Card removed from deck');
+      });
+
+      // Export Deck JSON
+      document.getElementById('btn-export-json').addEventListener('click', () => {
+        const cleanDeck = deck.map(({ _fitVars, ...rest }) => rest);
+        const blob = new Blob([JSON.stringify(cleanDeck, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'classroom-activity-cards.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Deck downloaded (.json)');
+      });
+
+      // Import Deck JSON
+      document.getElementById('input-import-json').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const parsed = JSON.parse(ev.target.result);
+            if (!Array.isArray(parsed) || parsed.length === 0) {
+              throw new Error('Invalid deck file');
+            }
+            deck = parsed.map((c, idx) => normalizeCard(c, idx));
+            activeCardId = deck[0].id;
+            saveState();
+            renderAll();
+            showToast(`Loaded ${deck.length} cards from file`);
+          } catch (err) {
+            showToast('Could not read deck file — please select a valid .json export');
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      });
+
+      // Copy Shareable Link
+      document.getElementById('btn-share-link').addEventListener('click', async () => {
+        const card = getActiveCard();
+        if (!card) return;
+        const shareUrl = buildShareableCardUrl(card);
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          showToast('Shareable link copied to clipboard!');
+        } catch (err) {
+          const tempInput = document.createElement('input');
+          tempInput.value = shareUrl;
+          document.body.appendChild(tempInput);
+          tempInput.select();
+          document.execCommand('copy');
+          document.body.removeChild(tempInput);
+          showToast('Shareable link copied to clipboard!');
+        }
+      });
+
+      // Print Current Card / Print All Cards
+      document.getElementById('btn-print-current').addEventListener('click', () => {
+        const card = getActiveCard();
+        if (card) triggerPrint([card]);
+      });
+
+      document.getElementById('btn-print-all').addEventListener('click', () => {
+        if (deck.length > 0) triggerPrint(deck);
+      });
+
+      // View Mode Switcher (Side-by-Side vs. 3D Flip)
+      const btnSideBySide = document.getElementById('view-side-by-side');
+      const btnFlipView = document.getElementById('view-flip');
+      const btnFlipTrigger = document.getElementById('btn-flip-trigger');
+      const stageSideBySide = document.getElementById('stage-side-by-side');
+      const stageFlip = document.getElementById('stage-flip');
+      const flipInner = document.getElementById('flip-inner');
+
+      btnSideBySide.addEventListener('click', () => {
+        viewMode = 'side-by-side';
+        btnSideBySide.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-sm transition cursor-pointer';
+        btnFlipView.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition cursor-pointer';
+        stageSideBySide.classList.remove('hidden');
+        stageFlip.classList.add('hidden');
+        btnFlipTrigger.classList.add('hidden');
+        requestAnimationFrame(() => fitAllBackCards());
+      });
+
+      btnFlipView.addEventListener('click', () => {
+        viewMode = 'flip';
+        btnFlipView.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-sm transition cursor-pointer';
+        btnSideBySide.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition cursor-pointer';
+        stageSideBySide.classList.add('hidden');
+        stageFlip.classList.remove('hidden');
+        btnFlipTrigger.classList.remove('hidden');
+        requestAnimationFrame(() => fitAllBackCards());
+      });
+
+      btnFlipTrigger.addEventListener('click', () => {
+        isFlipped = !isFlipped;
+        flipInner.classList.toggle('is-flipped', isFlipped);
+      });
+
+      // Theme Swatch Click
+      document.getElementById('theme-swatches').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-theme-id]');
+        if (!btn) return;
+        const card = getActiveCard();
+        card.themeId = btn.getAttribute('data-theme-id');
+        saveState();
+        renderAll();
+      });
+
+      // Binder Hole Guide Toggle
+      document.getElementById('toggle-hole-punch').addEventListener('change', (e) => {
+        const card = getActiveCard();
+        card.showHolePunch = e.target.checked;
+        saveState();
+        renderCardStage();
+      });
+
+      // Title Alignment Buttons
+      document.getElementById('title-align-group').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-title-align]');
+        if (!btn) return;
+        const card = getActiveCard();
+        card.titleAlign = btn.getAttribute('data-title-align');
+        saveState();
+        renderAll();
+      });
+
+      // Title Style Buttons
+      document.getElementById('title-style-group').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-title-style]');
+        if (!btn) return;
+        const card = getActiveCard();
+        card.titleStyle = btn.getAttribute('data-title-style');
+        saveState();
+        renderAll();
+      });
+
+      // Picture Frame Buttons
+      document.getElementById('image-frame-group').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-image-frame]');
+        if (!btn) return;
+        const card = getActiveCard();
+        card.imageFrame = btn.getAttribute('data-image-frame');
+        saveState();
+        renderAll();
+      });
+
+      // Built-In Illustration Picker
+      document.getElementById('illustration-presets').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-illustration-id]');
+        if (!btn) return;
+        const card = getActiveCard();
+        card.illustrationId = btn.getAttribute('data-illustration-id');
+        card.customPhoto = null;
+        saveState();
+        renderAll();
+      });
+
+      // Custom Classroom Photo Upload
+      document.getElementById('input-upload-photo').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        processUploadedPhoto(file, (dataUrl) => {
+          const card = getActiveCard();
+          card.customPhoto = dataUrl;
+          card.photoZoom = 100;
+          card.photoY = 50;
+          saveState();
+          renderAll();
+          showToast('Classroom photo added to card');
+        });
+        e.target.value = '';
+      });
+
+      // Picture Zoom, Position, Reset, and Remove Photo
+      document.getElementById('slider-photo-zoom').addEventListener('input', (e) => {
+        const card = getActiveCard();
+        card.photoZoom = Number(e.target.value);
+        saveState();
+        renderCardStage();
+      });
+
+      document.getElementById('slider-photo-y').addEventListener('input', (e) => {
+        const card = getActiveCard();
+        card.photoY = Number(e.target.value);
+        saveState();
+        renderCardStage();
+      });
+
+      document.getElementById('btn-reset-image-framing').addEventListener('click', () => {
+        const card = getActiveCard();
+        card.photoZoom = 100;
+        card.photoY = 50;
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('btn-remove-photo').addEventListener('click', () => {
+        const card = getActiveCard();
+        card.customPhoto = null;
+        saveState();
+        renderAll();
+        showToast('Switched back to built-in illustration');
+      });
+
+      // Form Text Fields -> Real-Time Card Preview
+      const fieldBindings = [
+        { inputId: 'field-category', prop: 'category', updateTabs: false },
+        { inputId: 'field-grades', prop: 'grades', updateTabs: true },
+        { inputId: 'field-title', prop: 'title', updateTabs: true },
+        { inputId: 'field-subtitle', prop: 'frontSubtitle', updateTabs: false },
+        { inputId: 'field-equipment', prop: 'equipment', updateTabs: false },
+        { inputId: 'field-integration', prop: 'integrationTip', updateTabs: false },
+        { inputId: 'field-credit', prop: 'credit', updateTabs: false },
+      ];
+
+      fieldBindings.forEach(({ inputId, prop, updateTabs }) => {
+        const el = document.getElementById(inputId);
+        el.addEventListener('input', (e) => {
+          const card = getActiveCard();
+          card[prop] = e.target.value;
+          saveState();
+          renderCardStage();
+          if (updateTabs) renderDeckTabs();
+        });
+      });
+
+      // Add Step Button
+      document.getElementById('btn-add-step').addEventListener('click', () => {
+        const card = getActiveCard();
+        card.steps.push('Add next movement instruction here.');
+        saveState();
+        renderCardStage();
+        renderStepsEditor();
+      });
+
+      // Steps Editor Delegation (Typing, Reordering, Deleting)
+      const stepsList = document.getElementById('steps-editor-list');
+      stepsList.addEventListener('input', (e) => {
+        const textarea = e.target.closest('[data-step-textarea]');
+        if (!textarea) return;
+        const idx = Number(textarea.getAttribute('data-step-textarea'));
+        const card = getActiveCard();
+        card.steps[idx] = textarea.value;
+        saveState();
+        renderCardStage();
+      });
+
+      stepsList.addEventListener('click', (e) => {
+        const card = getActiveCard();
+        const upBtn = e.target.closest('[data-move-step-up]');
+        if (upBtn) {
+          const idx = Number(upBtn.getAttribute('data-move-step-up'));
+          if (idx > 0) {
+            [card.steps[idx - 1], card.steps[idx]] = [card.steps[idx], card.steps[idx - 1]];
+            saveState();
+            renderCardStage();
+            renderStepsEditor();
+          }
+          return;
+        }
+
+        const downBtn = e.target.closest('[data-move-step-down]');
+        if (downBtn) {
+          const idx = Number(downBtn.getAttribute('data-move-step-down'));
+          if (idx < card.steps.length - 1) {
+            [card.steps[idx + 1], card.steps[idx]] = [card.steps[idx], card.steps[idx + 1]];
+            saveState();
+            renderCardStage();
+            renderStepsEditor();
+          }
+          return;
+        }
+
+        const delBtn = e.target.closest('[data-delete-step]');
+        if (delBtn) {
+          const idx = Number(delBtn.getAttribute('data-delete-step'));
+          if (card.steps.length > 1) {
+            card.steps.splice(idx, 1);
+            saveState();
+            renderCardStage();
+            renderStepsEditor();
+          }
+        }
+      });
+
+      // Inline Direct Editing on the Cards (Syncs with Editor Panel without losing cursor focus)
+      document.addEventListener('input', (e) => {
+        const target = e.target;
+        if (!target || !target.getAttribute) return;
+        const card = getActiveCard();
+        if (!card) return;
+
+        const field = target.getAttribute('data-inline-field');
+        if (field) {
+          const newText = target.innerText.replace(/\n+/g, ' ').trim();
+          card[field] = newText;
+          saveState();
+
+          const inputMap = {
+            category: 'field-category',
+            grades: 'field-grades',
+            title: 'field-title',
+            frontSubtitle: 'field-subtitle',
+            equipment: 'field-equipment',
+            integrationTip: 'field-integration',
+            credit: 'field-credit',
+          };
+          const formInput = document.getElementById(inputMap[field]);
+          if (formInput) formInput.value = newText;
+
+          // Sync matching inline elements on the opposite card face
+          document.querySelectorAll(`[data-inline-field="${field}"]`).forEach((el) => {
+            if (el !== target) {
+              el.innerHTML = field === 'category' ? formatCategoryLines(newText) : escapeHtml(newText);
+            }
+          });
+
+          if (field === 'title' || field === 'grades') renderDeckTabs();
+          fitAllBackCards();
+          return;
+        }
+
+        const stepAttr = target.getAttribute('data-step-index');
+        if (stepAttr !== null) {
+          const stepIdx = Number(stepAttr);
+          const newStepText = target.innerText.replace(/\n+/g, ' ').trim();
+          card.steps[stepIdx] = newStepText;
+          saveState();
+
+          const stepTextarea = document.querySelector(`[data-step-textarea="${stepIdx}"]`);
+          if (stepTextarea) stepTextarea.value = newStepText;
+
+          document.querySelectorAll(`[data-step-index="${stepIdx}"]`).forEach((el) => {
+            if (el !== target) el.textContent = newStepText;
+          });
+
+          fitAllBackCards();
+        }
+      });
+
+      document.addEventListener(
+        'blur',
+        (e) => {
+          const target = e.target;
+          if (
+            target &&
+            target.getAttribute &&
+            (target.hasAttribute('data-inline-field') || target.hasAttribute('data-step-index'))
+          ) {
+            saveState();
+            renderAll();
+          }
+        },
+        true
+      );
+
+      window.addEventListener('resize', () => {
+        requestAnimationFrame(() => fitAllBackCards());
+      });
+      window.addEventListener('beforeprint', fitAllBackCards);
+    }
+
+    // Bootstrap Application
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      bindEvents();
+      renderAll();
+    });
+  </script>
+</body>
+</html>
